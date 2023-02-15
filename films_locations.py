@@ -1,5 +1,6 @@
 import folium
 import pandas
+from geopy.geocoders import Nominatim
 
 
 def get_locations(file):
@@ -13,13 +14,17 @@ def get_locations(file):
                 location = info[-1]
                 if info[-1].startswith('('):
                     location = info[-2]+' '+info[-1]
-                films_locations[info[0]] = location.strip()
+                if info[0] not in films_locations.keys():
+                    films_locations[info[0]] = []
+                films_locations[info[0]].append(location.strip())
             except UnicodeDecodeError:
                 pass
     return films_locations
 
 def get_coordinates(location):
-    return []
+    geolocator = Nominatim(user_agent="name")
+    location = geolocator.geocode(location)
+    return [location.latitude, location.longitude]
 
 
 def generate_map(location, file):
@@ -30,20 +35,17 @@ def generate_map(location, file):
 
     fg = folium.FeatureGroup(name="Films map")
     for i, x in enumerate(locations.keys()):
+        print(x)
         if i >= 2:
             break
-        coordinates = get_coordinates(locations[x])
-        fg.add_child(folium.Marker(location=[coordinates[0], coordinates[1]],
-                                popup=x,
-                                icon=folium.Icon()))
+        for location in locations[x]:
+            coordinates = get_coordinates(location)
+            fg.add_child(folium.Marker(location=[coordinates[0], coordinates[1]],
+                                    popup=x,
+                                    icon=folium.Icon()))
     map.add_child(fg)
     map.save("Map.html")
-    # for i, x in enumerate(locations.keys()):
-    #     if i >= 10:
-    #         break
-    #     print(locations[x])
-
-        
 
 
-# print(generate_map(1, 'locations.list'))
+
+# generate_map(1, 'locations.list')
