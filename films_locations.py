@@ -1,6 +1,9 @@
 import folium
 import pandas
+import os
 from geopy.geocoders import Nominatim
+import requests
+import urllib.parse
 from math import *
 
 
@@ -38,26 +41,34 @@ def get_locations(file):
     return films_locations
 
 
-def get_coordinates(location):
+# def get_coordinates1(location):
+#     try:
+#         geolocator = Nominatim(user_agent="name")
+#         location = geolocator.geocode(location)
+#         return [location.latitude, location.longitude]
+#     except AttributeError:
+#         return [0, 0]
+
+def get_coordinates(address):
+    url = 'https://nominatim.openstreetmap.org/search/' + urllib.parse.quote(address) +'?format=json'
+
     try:
-        geolocator = Nominatim(user_agent="name")
-        location = geolocator.geocode(location)
-        return [location.latitude, location.longitude]
-    except AttributeError:
+        response = requests.get(url).json()[0]
+        return [response['lon'], response['lat']]
+    except IndexError:
         return [0, 0]
 
 
-def generate_map(location, file):
+def generate_map(start_location, file):
     locations = get_locations(file)
     map = folium.Map(tiles="Stamen Terrain",
-                location=[49.817545, 24.023932],
+                location=start_location,
                 zoom_control=3)
     fg = folium.FeatureGroup(name="Films map")
     for index, element in enumerate(locations.keys()):
         if index >= 10:
             break
         for location in locations[element]:
-            print(location)
             coordinates = get_coordinates(location)
             if coordinates != [0, 0]:
                 fg.add_child(folium.Marker(location=[coordinates[0], coordinates[1]],
@@ -67,4 +78,4 @@ def generate_map(location, file):
     map.save("Map.html")
 
 
-# generate_map(1, 'locations.list')
+generate_map([34.052235,-118.243683], 'locations.list')
