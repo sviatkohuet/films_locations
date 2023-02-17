@@ -1,27 +1,27 @@
 import folium
 import requests
-import pandas as pd
+import json
 import urllib.parse
-import random
-from math import *
+import math
 
 
 def calculate_distance(locations):
-    lat1 = locations[0][0]
-    lat2 = locations[1][0]
-    lon1 = locations[1][0]
-    lon2 = locations[1][1]
-    lon1, lat1, lon2, lat2 = map(radians, [lon1, lat1, lon2, lat2])
+    lat1, lon1 = locations[0]
+    lat2, lon2 = locations[1]
+    # lon1, lat1, lon2, lat2 = map(math.radians, [lon1, lat1, lon2, lat2])
 
-    # haversine formula 
-    dlon = lon2 - lon1 
-    dlat = lat2 - lat1 
-    a = sin(dlat/2)**2 + cos(lat1) * cos(lat2) * sin(dlon/2)**2
-    c = 2 * asin(sqrt(a))
-    r = 6371 # Radius of earth in kilometers. Use 3956 for miles. Determines return value units.
-    return 13400- (c * r)
+    radius = 6371  # km
+ 
+    dlat = math.radians(lat2-lat1)
+    dlon = math.radians(lon2-lon1)
+    a = math.sin(dlat/2) * math.sin(dlat/2) + math.cos(math.radians(lat1)) \
+        * math.cos(math.radians(lat2)) * math.sin(dlon/2) * math.sin(dlon/2)
+    c = 2 * math.atan2(math.sqrt(a), math.sqrt(1-a))
+    d = radius * c
+ 
+    return d
 
-def get_locations(file):
+def get_locations(file, start):
     with open(file, 'rb') as f:
         films_locations = {}
         for _ in range(14):
@@ -40,17 +40,14 @@ def get_locations(file):
     return films_locations
 
 
-def create_df(locations):
-    return pd.DataFrame(locations)
-
-
 def get_coordinates(address):
     url = 'https://nominatim.openstreetmap.org/search/' + urllib.parse.quote(address) +'?format=json'
 
     try:
         response = requests.get(url).json()[0]
+        print([float(response['lat']), float(response['lon'])])
         return [float(response['lat']), float(response['lon'])]
-    except IndexError:
+    except (IndexError, json.decoder.JSONDecodeError):
         return [0, 0]
 
 
@@ -58,19 +55,19 @@ def get_coordinates(address):
 #     pass
 
 def generate_map(start_location, file):
-    locations = get_locations(file)
+    locations = get_locations(file, start_location)
     # sorted_locations = sort_by_distance(locations)
     map = folium.Map(tiles="Stamen Terrain",
                 location=start_location,
                 zoom_control=3)
     fg = folium.FeatureGroup(name="Films map")
     number = 0
-    for index, element in enumerate(locations.keys()):
+    for _, element in enumerate(locations.keys()):
         if number >= 20:
             break
         for location in locations[element]:
             coordinates = get_coordinates(location)
-            if coordinates != [0, 0] and calculate_distance([start_location, coordinates]) <= 3000:
+            if coordinates != [0, 0] and calculate_distance([start_location, coordinates]) <= 2000:
                 fg.add_child(folium.Marker(location=[coordinates[0], coordinates[1]],
                                     popup=element,
                                     icon=folium.Icon()))
