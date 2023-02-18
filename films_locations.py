@@ -1,11 +1,19 @@
 import folium
 import requests
-import json
+import pandas as pd
 import urllib.parse
 import math
+import json
 
 
 def calculate_distance(locations):
+    """Calculate the great circle distance between two points
+    on the earth (specified in decimal degrees) and return it in km
+    
+    :param locations: list of two lists with lat and lon
+
+    :return: distance in km
+    """
     lat1, lon1 = locations[0]
     lat2, lon2 = locations[1]
 
@@ -20,7 +28,14 @@ def calculate_distance(locations):
  
     return d
 
-def get_locations(file, start):
+def get_locations(file):
+    """Get locations of films from file and sort them by distance from start location
+
+    :param file: file with locations
+    :param start: start location
+
+    :return: dictionary with films and locations
+    """
     with open(file, 'rb') as f:
         films_locations = {}
         for _ in range(14):
@@ -40,6 +55,12 @@ def get_locations(file, start):
 
 
 def get_coordinates(address):
+    """Get coordinates of address from OpenStreetMap
+
+    :param address: address
+
+    :return: list with lat and lon
+    """
     url = 'https://nominatim.openstreetmap.org/search/' + urllib.parse.quote(address) +'?format=json'
 
     try:
@@ -49,48 +70,56 @@ def get_coordinates(address):
         return [0, 0]
 
 
-def sort_by_distance(locations):
+def sort_by_distance(locations, start_location):
+    """Sort locations by distance from start location and return dictionary with films and locations
+    
+    :param locations: dictionary with films and locations
+
+    :return: dictionary with films and locations
+    """
     sorted_locations = {}
     for film in locations.keys():
         sorted_locations[film] = []
         for location in locations[film]:
             coordinates = get_coordinates(location)
             if coordinates != [0, 0]:
-                sorted_locations[film].append([calculate_distance([[34.0536909, -118.242766], coordinates]), location])
+                sorted_locations[film].append([calculate_distance([start_location, coordinates]), location])
         sorted_locations[film] = sorted(sorted_locations[film], key=lambda x: x[0])
     return sorted_locations
 
 def generate_map(start_location, file, radius=None):
-    locations = get_locations(file, start_location)
-    sorted_locations = sort_by_distance(locations)
+    """Generate map with films locations and save it to Map.html file
+
+    :param start_location: start location
+    :param file: file with locations
+    :param radius: radius of search
+
+    :return: 1 if success
+    """
+    locations = get_locations(file)
     map = folium.Map(tiles="Stamen Terrain",
                 location=start_location,
                 zoom_control=3)
     fg = folium.FeatureGroup(name="Films map")
     number = 0
-    if radius==None:
-        for film in sorted_locations.keys():
-            if number >= 20:
-                break
-            for location in sorted_locations[film]:
-                coordinates = get_coordinates(location[1])
-                if coordinates != [0, 0]:
-                    fg.add_child(folium.Marker(location=[coordinates[0], coordinates[1]],
-                                        popup=film, icon=folium.Icon()))                    
-                    number += 1
-        return 1
+    visited = set()
+    if radius is None:
+        locations = sort_by_distance(locations, start_location)
     for _, element in enumerate(locations.keys()):
         if number >= 10:
             break
         for location in locations[element]:
             coordinates = get_coordinates(location)
-            if coordinates != [0, 0] and calculate_distance([start_location, coordinates]) <= radius:
+            if coordinates != [0, 0] and calculate_distance([start_location, coordinates]) <= radius and\
+                    location not in visited:
+                visited.add(location)
                 fg.add_child(folium.Marker(location=[coordinates[0], coordinates[1]],
                                     popup=element,
                                     icon=folium.Icon()))
                 number += 1
     map.add_child(fg)
-    map.save("Map.html")
+    map.save("Map1.html")
     return 1
 
-# generate_map([34.0536909, -118.242766], 'locations.list', 3000)
+
+generate_map([34.0536909, -118.242766], 'locations.list', 3000)
