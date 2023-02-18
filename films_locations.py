@@ -1,6 +1,6 @@
 import folium
+import argparse
 import requests
-import pandas as pd
 import urllib.parse
 import math
 import json
@@ -25,7 +25,7 @@ def calculate_distance(locations):
         * math.cos(math.radians(lat2)) * math.sin(dlon/2) * math.sin(dlon/2)
     c = 2 * math.atan2(math.sqrt(a), math.sqrt(1-a))
     d = radius * c
- 
+
     return d
 
 def get_locations(file):
@@ -87,7 +87,7 @@ def sort_by_distance(locations, start_location):
         sorted_locations[film] = sorted(sorted_locations[film], key=lambda x: x[0])
     return sorted_locations
 
-def generate_map(start_location, file, radius=None):
+def generate_map(start_location, file, year, radius=None):
     """Generate map with films locations and save it to Map.html file
 
     :param start_location: start location
@@ -105,6 +105,8 @@ def generate_map(start_location, file, radius=None):
     visited = set()
     if radius is None:
         locations = sort_by_distance(locations, start_location)
+    else:
+        radius = float(radius)
     for _, element in enumerate(locations.keys()):
         if number >= 10:
             break
@@ -122,4 +124,13 @@ def generate_map(start_location, file, radius=None):
     return 1
 
 
-generate_map([34.0536909, -118.242766], 'locations.list', 3000)
+
+
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--radius", type=int, default=2000, required=False)
+    parser.add_argument('year', type=int, default=2018)
+    parser.add_argument("lat", type=float, default=34.0536909)
+    parser.add_argument("lon", type=float, default=-118.242766)
+    all_args = parser.parse_args()
+    generate_map([all_args.lat, all_args.lon], 'locations.list', all_args.year, all_args.radius)
