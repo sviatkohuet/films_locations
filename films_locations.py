@@ -115,6 +115,7 @@ def generate_map(start_location, file, year, radius=None):
     number = 0
     visited = set()
     if radius is None:
+        print('121312313')
         locations = sort_by_distance(locations, start_location)
     else:
         radius = float(radius)
@@ -140,8 +141,8 @@ def generate_map(start_location, file, year, radius=None):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument("--radius", type=int, default=2000, required=False)
-    parser.add_argument('year', type=int, default=2018)
+    parser.add_argument("--radius", type=int, required=False, default=None)
+    parser.add_argument('year', type=int, default=2016)
     parser.add_argument("lat", type=float, default=34.0536909)
     parser.add_argument("lon", type=float, default=-118.242766)
     all_args = parser.parse_args()
