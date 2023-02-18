@@ -87,6 +87,17 @@ def sort_by_distance(locations, start_location):
         sorted_locations[film] = sorted(sorted_locations[film], key=lambda x: x[0])
     return sorted_locations
 
+
+def get_year(film):
+    """Get year of film
+
+    :param film: film
+
+    :return: year of film
+    """
+    return film.split('(')[1].split(')')[0]
+
+
 def generate_map(start_location, file, year, radius=None):
     """Generate map with films locations and save it to Map.html file
 
@@ -113,7 +124,8 @@ def generate_map(start_location, file, year, radius=None):
         for location in locations[element]:
             coordinates = get_coordinates(location)
             if coordinates != [0, 0] and calculate_distance([start_location, coordinates]) <= radius and\
-                    location not in visited:
+                    location not in visited and get_year(element) == str(year):
+                print(element, location, coordinates)
                 visited.add(location)
                 fg.add_child(folium.Marker(location=[coordinates[0], coordinates[1]],
                                     popup=element,
