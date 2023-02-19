@@ -4,6 +4,8 @@ import requests
 import urllib.parse
 import math
 import json
+from geopy.geocoders import Nominatim
+from geopy.extra.rate_limiter import RateLimiter
 
 
 def calculate_distance(locations):
@@ -32,7 +34,6 @@ def get_locations(file):
     """Get locations of films from file and sort them by distance from start location
 
     :param file: file with locations
-    :param start: start location
 
     :return: dictionary with films and locations
     """
@@ -70,24 +71,6 @@ def get_coordinates(address):
         return [0, 0]
 
 
-def sort_by_distance(locations, start_location):
-    """Sort locations by distance from start location and return dictionary with films and locations
-    
-    :param locations: dictionary with films and locations
-
-    :return: dictionary with films and locations
-    """
-    sorted_locations = {}
-    for film in locations.keys():
-        sorted_locations[film] = []
-        for location in locations[film]:
-            coordinates = get_coordinates(location)
-            if coordinates != [0, 0]:
-                sorted_locations[film].append([calculate_distance([start_location, coordinates]), location])
-        sorted_locations[film] = sorted(sorted_locations[film], key=lambda x: x[0])
-    return sorted_locations
-
-
 def get_year(film):
     """Get year of film
 
@@ -98,7 +81,7 @@ def get_year(film):
     return film.split('(')[1].split(')')[0]
 
 
-def generate_map(start_location, file, year, radius=None):
+def generate_map(start_location, file, year, radius):
     """Generate map with films locations and save it to Map.html file
 
     :param start_location: start location
@@ -114,11 +97,8 @@ def generate_map(start_location, file, year, radius=None):
     fg = folium.FeatureGroup(name="Films map")
     number = 0
     visited = set()
-    if radius is None:
-        print('121312313')
-        locations = sort_by_distance(locations, start_location)
-    else:
-        radius = float(radius)
+
+    radius = float(radius)
     for _, element in enumerate(locations.keys()):
         if number >= 10:
             break
@@ -141,7 +121,7 @@ def generate_map(start_location, file, year, radius=None):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument("--radius", type=int, required=False, default=None)
+    parser.add_argument("radius", type=int, default=3000)
     parser.add_argument('year', type=int, default=2016)
     parser.add_argument("lat", type=float, default=34.0536909)
     parser.add_argument("lon", type=float, default=-118.242766)
