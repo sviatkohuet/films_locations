@@ -4,6 +4,8 @@ import requests
 import urllib.parse
 import math
 import json
+import pycountry
+from geopy.geocoders import Nominatim
 
 
 def calculate_distance(locations):
@@ -28,7 +30,27 @@ def calculate_distance(locations):
 
     return d
 
-def get_locations(file, year):
+def get_country_from_coordinates(coordinates):
+    """Get country from coordinates
+
+    :param coordinates: list with lat and lon
+
+    :return: country
+    """
+    country_codes = {country.alpha_2: country.name for country in pycountry.countries}
+    other_names = {'United States': 'USA', 'United Kingdom': 'UK', 'Russian Federation': 'Russia'}
+    try:
+        geolocator = Nominatim(user_agent="name")
+        location = geolocator.reverse(coordinates)
+
+        if country_codes[location.raw['address']['country_code'].upper()] in other_names.keys():
+            return other_names[country_codes[location.raw['address']['country_code'].upper()]]
+        return country_codes[location.raw['address']['country_code'].upper()]
+    except (IndexError, json.decoder.JSONDecodeError, KeyError):
+        return None
+
+
+def get_locations(file, year, country):
     """Get locations of films from file and sort them by distance from start location
 
     :param file: file with locations
@@ -46,9 +68,10 @@ def get_locations(file, year):
                 location = info[-1]
                 if info[-1].startswith('('):
                     location = info[-2]
-                if info[0] not in films_locations.keys():
-                    films_locations[info[0]] = []
-                if str(year) in info[0] and location.strip() not in used_locations:
+                if str(year) in info[0] and location.strip() not in used_locations\
+                    and country in location:
+                    if info[0] not in films_locations.keys():
+                        films_locations[info[0]] = []
                     films_locations[info[0]].append(location.strip())
                     used_locations.add(location.strip())
             except UnicodeDecodeError:
@@ -81,6 +104,7 @@ def get_year(film):
     """
     return film.split('(')[1].split(')')[0]
 
+
 def sort_by_distance(locations, start_location):
     """Sort locations by distance from start location
 
@@ -101,9 +125,11 @@ def generate_map(start_location, file, year, radius):
 
     :return: 1 if success
     """
-    locations = get_locations(file, year)
+    country = get_country_from_coordinates(start_location)
+    locations = get_locations(file, year, country)
     print(len(locations.keys()))
-    # print(sort_by_distance(locations, start_location))
+    # country = get_country_from_coordinates(start_location)
+    print(sort_by_distance(locations, start_location))
     map = folium.Map(tiles="Stamen Terrain",
                 location=start_location,
                 zoom_control=3)
