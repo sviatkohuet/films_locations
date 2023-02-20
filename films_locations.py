@@ -4,8 +4,6 @@ import requests
 import urllib.parse
 import math
 import json
-from geopy.geocoders import Nominatim
-from geopy.extra.rate_limiter import RateLimiter
 
 
 def calculate_distance(locations):
@@ -30,13 +28,14 @@ def calculate_distance(locations):
 
     return d
 
-def get_locations(file):
+def get_locations(file, year):
     """Get locations of films from file and sort them by distance from start location
 
     :param file: file with locations
 
     :return: dictionary with films and locations
     """
+    used_locations = set()
     with open(file, 'rb') as f:
         films_locations = {}
         for _ in range(14):
@@ -49,7 +48,9 @@ def get_locations(file):
                     location = info[-2]
                 if info[0] not in films_locations.keys():
                     films_locations[info[0]] = []
-                films_locations[info[0]].append(location.strip())
+                if str(year) in info[0] and location.strip() not in used_locations:
+                    films_locations[info[0]].append(location.strip())
+                    used_locations.add(location.strip())
             except UnicodeDecodeError:
                 pass
     return films_locations
@@ -80,6 +81,16 @@ def get_year(film):
     """
     return film.split('(')[1].split(')')[0]
 
+def sort_by_distance(locations, start_location):
+    """Sort locations by distance from start location
+
+    :param locations: list of locations
+    :param start_location: start location
+
+    :return: sorted list of locations
+    """
+    return sorted(locations, key=lambda x: calculate_distance([start_location, get_coordinates(x)]))
+
 
 def generate_map(start_location, file, year, radius):
     """Generate map with films locations and save it to Map.html file
@@ -90,7 +101,9 @@ def generate_map(start_location, file, year, radius):
 
     :return: 1 if success
     """
-    locations = get_locations(file)
+    locations = get_locations(file, year)
+    print(len(locations.keys()))
+    # print(sort_by_distance(locations, start_location))
     map = folium.Map(tiles="Stamen Terrain",
                 location=start_location,
                 zoom_control=3)
@@ -106,7 +119,7 @@ def generate_map(start_location, file, year, radius):
             coordinates = get_coordinates(location)
             if coordinates != [0, 0] and calculate_distance([start_location, coordinates]) <= radius and\
                     location not in visited and get_year(element) == str(year):
-                print(element, location, coordinates)
+                # print(element, location, coordinates)
                 visited.add(location)
                 fg.add_child(folium.Marker(location=[coordinates[0], coordinates[1]],
                                     popup=element,
@@ -115,8 +128,6 @@ def generate_map(start_location, file, year, radius):
     map.add_child(fg)
     map.save("Map1.html")
     return 1
-
-
 
 
 if __name__ == '__main__':
