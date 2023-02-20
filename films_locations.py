@@ -63,6 +63,8 @@ def get_locations(file, year, country):
         for _ in range(14):
             f.readline()
         for line in f.readlines():
+            if len(used_locations) >= 150:
+                break
             try:
                 info = line.decode('utf-8').split('\t')
                 location = info[-1]
@@ -72,6 +74,8 @@ def get_locations(file, year, country):
                     and country in location:
                     if info[0] not in films_locations.keys():
                         films_locations[info[0]] = []
+                    else:
+                        continue
                     films_locations[info[0]].append(location.strip())
                     used_locations.add(location.strip())
             except UnicodeDecodeError:
@@ -113,10 +117,10 @@ def sort_by_distance(locations, start_location):
 
     :return: sorted list of locations
     """
-    return sorted(locations, key=lambda x: calculate_distance([start_location, get_coordinates(x)]))
+    return {k: v for k, v in sorted(locations.items(), key=lambda item: calculate_distance([start_location, get_coordinates(item[1][0])]))}
 
 
-def generate_map(start_location, file, year, radius):
+def generate_map(start_location, file, year):
     """Generate map with films locations and save it to Map.html file
 
     :param start_location: start location
@@ -127,26 +131,19 @@ def generate_map(start_location, file, year, radius):
     """
     country = get_country_from_coordinates(start_location)
     locations = get_locations(file, year, country)
-    print(len(locations.keys()))
-    # country = get_country_from_coordinates(start_location)
-    print(sort_by_distance(locations, start_location))
+    locations = sort_by_distance(locations, start_location)
     map = folium.Map(tiles="Stamen Terrain",
                 location=start_location,
                 zoom_control=3)
     fg = folium.FeatureGroup(name="Films map")
     number = 0
-    visited = set()
 
-    radius = float(radius)
     for _, element in enumerate(locations.keys()):
         if number >= 10:
             break
         for location in locations[element]:
             coordinates = get_coordinates(location)
-            if coordinates != [0, 0] and calculate_distance([start_location, coordinates]) <= radius and\
-                    location not in visited and get_year(element) == str(year):
-                # print(element, location, coordinates)
-                visited.add(location)
+            if coordinates != [0, 0]:
                 fg.add_child(folium.Marker(location=[coordinates[0], coordinates[1]],
                                     popup=element,
                                     icon=folium.Icon()))
@@ -158,9 +155,9 @@ def generate_map(start_location, file, year, radius):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument("radius", type=int, default=3000)
+    parser.add_argument('file', type=str, default='locations.list')
     parser.add_argument('year', type=int, default=2016)
     parser.add_argument("lat", type=float, default=34.0536909)
     parser.add_argument("lon", type=float, default=-118.242766)
     all_args = parser.parse_args()
-    generate_map([all_args.lat, all_args.lon], 'locations.list', all_args.year, all_args.radius)
+    generate_map([all_args.lat, all_args.lon], all_args.file, all_args.year)
