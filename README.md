@@ -11,7 +11,6 @@
  
  ```pip install folium
  pip install geopy
- pip install
  pip install pycountry
  pip install requests
  ```
