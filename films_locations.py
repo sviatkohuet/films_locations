@@ -136,6 +136,8 @@ def generate_map(start_location, file, year):
                 location=start_location,
                 zoom_control=3)
     fg = folium.FeatureGroup(name="Films map")
+    fg1 = folium.FeatureGroup(name="Beatiful layer")
+    fg1.add_child(folium.GeoJson(data=open('world.json', 'r', encoding='utf-8-sig').read()))
     number = 0
 
     for _, element in enumerate(locations.keys()):
@@ -148,6 +150,7 @@ def generate_map(start_location, file, year):
                                     popup=element,
                                     icon=folium.Icon()))
                 number += 1
+    map.add_child(fg1)
     map.add_child(fg)
     map.save("Map1.html")
     return 1
