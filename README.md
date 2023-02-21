@@ -13,6 +13,7 @@
  pip install geopy
  pip install pycountry
  pip install requests
+ pip install urllib3
  ```
  
 # Usage
