@@ -1,3 +1,5 @@
+""" This module generates map with films locations and save it to Map.html file """
+
 import folium
 import argparse
 import requests
