@@ -1,12 +1,12 @@
 """ This module generates map with films locations and save it to Map.html file """
 
-import folium
 import argparse
-import requests
-import urllib.parse
 import math
 import json
+import urllib.parse
+import requests
 import pycountry
+import folium
 from geopy.geocoders import Nominatim
 
 
@@ -22,7 +22,7 @@ def calculate_distance(locations):
     lat2, lon2 = locations[1]
 
     radius = 6371  # km
- 
+
     dlat = math.radians(lat2-lat1)
     dlon = math.radians(lon2-lon1)
     a = math.sin(dlat/2) * math.sin(dlat/2) + math.cos(math.radians(lat1)) \
