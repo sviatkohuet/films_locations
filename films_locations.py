@@ -1,12 +1,12 @@
 """ This module generates map with films locations and save it to Map.html file """
 
-import folium
 import argparse
-import requests
-import urllib.parse
 import math
 import json
+import urllib.parse
+import requests
 import pycountry
+import folium
 from geopy.geocoders import Nominatim
 
 
@@ -17,12 +17,16 @@ def calculate_distance(locations):
     :param locations: list of two lists with lat and lon
 
     :return: distance in km
+    >>> calculate_distance([[55.75, 37.61], [55.75, 37.61]])
+    0.0
+    >>> calculate_distance([[55.75, 37.61], [32.75, 37.61]])
+    2557.4833128248515
     """
     lat1, lon1 = locations[0]
     lat2, lon2 = locations[1]
 
     radius = 6371  # km
- 
+
     dlat = math.radians(lat2-lat1)
     dlon = math.radians(lon2-lon1)
     a = math.sin(dlat/2) * math.sin(dlat/2) + math.cos(math.radians(lat1)) \
@@ -38,6 +42,8 @@ def get_country_from_coordinates(coordinates):
     :param coordinates: list with lat and lon
 
     :return: country
+    >>> get_country_from_coordinates([34.0522, -118.2437])
+    'USA'
     """
     country_codes = {country.alpha_2: country.name for country in pycountry.countries}
     other_names = {'United States': 'USA', 'United Kingdom': 'UK', 'Russian Federation': 'Russia'}
@@ -58,31 +64,37 @@ def get_locations(file, year, country):
     :param file: file with locations
 
     :return: dictionary with films and locations
+    >>> get_locations('', 2010, 'USA')
+    File not found
     """
     used_locations = set()
-    with open(file, 'rb') as f:
-        films_locations = {}
-        for _ in range(14):
-            f.readline()
-        for line in f.readlines():
-            if len(used_locations) >= 150:
-                break
-            try:
-                info = line.decode('utf-8').split('\t')
-                location = info[-1]
-                if info[-1].startswith('('):
-                    location = info[-2]
-                if str(year) in info[0] and location.strip() not in used_locations\
-                    and country in location:
-                    if info[0] not in films_locations.keys():
-                        films_locations[info[0]] = []
-                    else:
-                        continue
-                    films_locations[info[0]].append(location.strip())
-                    used_locations.add(location.strip())
-            except UnicodeDecodeError:
-                pass
-    return films_locations
+    try:
+        with open(file, 'rb') as f:
+            films_locations = {}
+            for _ in range(14):
+                f.readline()
+            for line in f.readlines():
+                if len(used_locations) >= 150:
+                    break
+                try:
+                    info = line.decode('utf-8').split('\t')
+                    location = info[-1]
+                    if info[-1].startswith('('):
+                        location = info[-2]
+                    if str(year) in info[0] and location.strip() not in used_locations\
+                        and country in location:
+                        if info[0] not in films_locations.keys():
+                            films_locations[info[0]] = []
+                        else:
+                            continue
+                        films_locations[info[0]].append(location.strip())
+                        used_locations.add(location.strip())
+                except UnicodeDecodeError:
+                    pass
+        return films_locations
+    except FileNotFoundError:
+        print('File not found')
+        return None
 
 
 def get_coordinates(address):
@@ -91,6 +103,10 @@ def get_coordinates(address):
     :param address: address
 
     :return: list with lat and lon
+    >>> get_coordinates('Los Angeles, California, USA')
+    [34.0536909, -118.242766]
+    >>> get_coordinates('Lviv, Ukraine')
+    [49.841952, 24.0315921]
     """
     url = 'https://nominatim.openstreetmap.org/search/' + urllib.parse.quote(address) +'?format=json'
 
@@ -107,6 +123,8 @@ def get_year(film):
     :param film: film
 
     :return: year of film
+    >>> get_year('The Dark Knight (2008)')
+    '2008'
     """
     return film.split('(')[1].split(')')[0]
 
@@ -118,8 +136,12 @@ def sort_by_distance(locations, start_location):
     :param start_location: start location
 
     :return: sorted list of locations
+    >>> sort_by_distance({'The Dark Knight (2008)': ['Los Angeles, California, USA'],\
+         'One more film': ['Lviv, Ukraine'] }, [34.0522, -118.2437])
+    {'The Dark Knight (2008)': ['Los Angeles, California, USA'], 'One more film': ['Lviv, Ukraine']}
     """
-    return {k: v for k, v in sorted(locations.items(), key=lambda item: calculate_distance([start_location, get_coordinates(item[1][0])]))}
+    return {k: v for k, v in sorted(locations.items(), key=lambda item:\
+                                calculate_distance([start_location, get_coordinates(item[1][0])]))}
 
 
 def generate_map(start_location, file, year):
